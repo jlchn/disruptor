@@ -20,7 +20,7 @@ import sun.misc.Unsafe;
 import com.lmax.disruptor.util.Util;
 
 
-class LhsPadding
+class LhsPadding // left padding
 {
     protected long p1, p2, p3, p4, p5, p6, p7;
 }
@@ -42,6 +42,9 @@ class RhsPadding extends Value
  *
  * <p>Also attempts to be more efficient with regards to false
  * sharing by adding padding around the volatile field.
+ *
+ * <p> long take 8 bytes, but cache line has 64 bytes, in order to
+ * prevent false sharing, we make Sequence 64 bytes long to make it take the entire cache line.
  */
 public class Sequence extends RhsPadding
 {

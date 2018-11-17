@@ -121,21 +121,27 @@ public final class SingleProducerSequencer extends SingleProducerSequencerFields
             throw new IllegalArgumentException("n must be > 0 and < bufferSize");
         }
 
-        long nextValue = this.nextValue;
+        long nextValue = this.nextValue; // ringbuffer 当前的序号值
 
-        long nextSequence = nextValue + n;
-        long wrapPoint = nextSequence - bufferSize;
-        long cachedGatingSequence = this.cachedValue;
+         long nextSequence = nextValue + n;
+        long wrapPoint = nextSequence - bufferSize;//
+        long cachedGatingSequence = this.cachedValue;// 不要每次都湖区消费者的最小序号
 
         if (wrapPoint > cachedGatingSequence || cachedGatingSequence > nextValue)
         {
             cursor.setVolatile(nextValue);  // StoreLoad fence
 
             long minSequence;
+            /**
+             * 自旋操作（空轮询）：不满足条件就阻塞
+             * 找到消费者中消费者序号的最小值
+             * 如果生产者序号 大于 消费者中最做小的序号，挂起生产者, 否则会覆盖
+             */
             while (wrapPoint > (minSequence = Util.getMinimumSequence(gatingSequences, nextValue)))
             {
-                LockSupport.parkNanos(1L); // TODO: Use waitStrategy to spin?
+                LockSupport.parkNanos(1L); // 挂起1 纳秒
             }
+
 
             this.cachedValue = minSequence;
         }

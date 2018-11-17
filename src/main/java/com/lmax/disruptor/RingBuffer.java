@@ -54,9 +54,9 @@ abstract class RingBufferFields<E> extends RingBufferPad
     }
 
     private final long indexMask;
-    private final Object[] entries;
-    protected final int bufferSize;
-    protected final Sequencer sequencer;
+    private final Object[] entries; // where to keep the tasks
+    protected final int bufferSize; // size of buffer
+    protected final Sequencer sequencer; // single producer or multiple producer
 
     RingBufferFields(
         EventFactory<E> eventFactory,
@@ -75,18 +75,31 @@ abstract class RingBufferFields<E> extends RingBufferPad
         }
 
         this.indexMask = bufferSize - 1;
+        /**
+         * bufferSize 由外部传入
+         * 2 * BUFFER_PAD 缓存行填充
+         */
         this.entries = new Object[sequencer.getBufferSize() + 2 * BUFFER_PAD];
         fill(eventFactory);
     }
 
+    /**
+     * 实现内存预加载
+     * @param eventFactory
+     */
     private void fill(EventFactory<E> eventFactory)
     {
         for (int i = 0; i < bufferSize; i++)
         {
-            entries[BUFFER_PAD + i] = eventFactory.newInstance();
+            entries[BUFFER_PAD + i] = eventFactory.newInstance();// 创建RingBuffer时有个参数是eventFactory，并且要求重写newInstance方法
         }
     }
 
+    /**
+     * get task from the buffer according to sequence
+     * @param sequence
+     * @return
+     */
     @SuppressWarnings("unchecked")
     protected final E elementAt(long sequence)
     {
